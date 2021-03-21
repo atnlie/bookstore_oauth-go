@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"github.com/mercadolibre/golang-restclient/rest"
 	"net/http"
+	"oauthatn/oauth/utils"
 	"strconv"
 	"strings"
 	"time"
 )
 
 const (
-	headerXPublic   = "X-Public"
-	headerXClientId = "X-Client-Id"
-	headerXCallerId = "X-Caller-Id"
-
+	headerXPublic    = "X-Public"
+	headerXClientId  = "X-Client-Id"
+	headerXCallerId  = "X-Caller-Id"
 	paramAccessToken = "access-token"
 )
 
@@ -62,14 +62,15 @@ func GetClientId(req *http.Request) int64 {
 	return clientId
 }
 
-func AuthenticationRequest(req *http.Request) *utils.RestErr {
+func AuthenticateRequest(req *http.Request) *utils.RestErr {
 	if req == nil {
-		return RestError
+		return nil
 	}
 
 	cleanRequest(req)
 
 	atId := strings.TrimSpace(req.URL.Query().Get(paramAccessToken))
+	// http://api.bookstore.com/resource?access_token=abc123
 	if atId == "" {
 		return nil
 	}
@@ -85,7 +86,7 @@ func AuthenticationRequest(req *http.Request) *utils.RestErr {
 	return nil
 }
 
-func cleanRequest(req *http.Request)  {
+func cleanRequest(req *http.Request) {
 	if req == nil {
 		return
 	}
@@ -96,21 +97,21 @@ func cleanRequest(req *http.Request)  {
 func GetAccessToken(aTokenId string) (*accessToken, *utils.RestErr) {
 	response := oauthRestClient.Get(fmt.Sprintf("/oauth/access_token/%s", aTokenId))
 	if response == nil || response.Response == nil {
-		return nil, utils.CustomInternalServerError("invalid rest-client response when trying login")
+		return nil, utils.CustomInternalServerError("invalid rest-client response when trying to get access token")
 	}
 
 	if response.StatusCode > 299 {
 		var restErr utils.RestErr
 		err := json.Unmarshal(response.Bytes(), &restErr)
 		if err != nil {
-			return nil, utils.CustomInternalServerError("invalid interface error when trying to login user")
+			return nil, utils.CustomInternalServerError("invalid interface error when trying to get acces token")
 		}
 		return nil, &restErr
 	}
 
 	var at accessToken
 	if err := json.Unmarshal(response.Bytes(), &at); err != nil {
-		return nil, utils.CustomInternalServerError("error when trying unmarshal users response")
+		return nil, utils.CustomInternalServerError("error when trying unmarshal access token response")
 	}
 
 	return &at, nil
